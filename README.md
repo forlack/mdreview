@@ -1,7 +1,7 @@
 # mdreview
 
 Review Markdown where it lives. Browse rendered documents, anchor feedback to
-exact text, and hand the revision to your coding agent with one copied command.
+exact text, and hand your agent the comments to address in the next revision.
 
 Everything stays in the project. mdreview runs as a single local process, opens
 in your browser, and stores comments and revision history in `.md-review` so an
