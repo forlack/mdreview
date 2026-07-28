@@ -3,8 +3,10 @@
 A lightweight, local-first browser for reviewing Markdown files and leaving
 comments that remain useful to both people and LLM coding agents.
 
-The repository now contains a working MVP. It runs as one native process, opens
-the normal browser, and keeps review data inside the reviewed project.
+It runs as one native process, opens the normal browser, and keeps review data
+inside the reviewed project.
+
+![mdreview showing rendered Markdown, anchored comments, and a pending agent task](docs/assets/mdreview-screenshot.png)
 
 ## Prerequisites
 
@@ -82,7 +84,7 @@ mdreview init
 If `AGENTS.md` already exists, the command only previews the block. Re-run with
 `--append` to approve adding the marked block without changing existing text.
 
-## Human review workflow
+## Reviewing a Markdown Workflow
 
 1. Select a Markdown file in the project tree.
 2. Select rendered text and click **Comment**.
