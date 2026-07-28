@@ -1,12 +1,12 @@
 # mdreview
 
-Run `mdreview .` in any project to browse its rendered Markdown, anchor feedback
-to exact text, and hand your agent the comments to address in the next revision.
+Review Markdown where it lives. Browse rendered documents, anchor feedback to
+exact text, and hand your agent the comments to address in the next revision.
 
-Everything stays in the project. mdreview runs as a single local process, opens
-in your browser, and stores durable comments and revision history alongside the
-project files in `.md-review` so an agent can pick up the work without needing
-your prior chat context.
+Run `mdreview .` in any project to open its review workspace in your browser.
+Everything stays local, with durable comments and revision history stored beside
+the project files in `.md-review`, so an agent can pick up the work without
+needing your prior chat context.
 
 ![mdreview showing rendered Markdown, anchored comments, and a pending agent task](docs/assets/mdreview-screenshot.png)
 
