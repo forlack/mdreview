@@ -1,12 +1,55 @@
 # mdreview
 
-A lightweight, local-first browser for reviewing Markdown files and leaving
-comments that remain useful to both people and LLM coding agents.
+Review Markdown where it lives. Browse rendered documents, anchor feedback to
+exact text, and hand the revision to your coding agent with one copied command.
 
-It runs as one native process, opens the normal browser, and keeps review data
-inside the reviewed project.
+Everything stays in the project. mdreview runs as a single local process, opens
+in your browser, and stores comments and revision history in `.md-review` so an
+agent can pick up the work without needing your prior chat context.
 
 ![mdreview showing rendered Markdown, anchored comments, and a pending agent task](docs/assets/mdreview-screenshot.png)
+
+## Reviewing a Markdown Workflow
+
+1. Select a Markdown file in the project tree.
+2. Select rendered text and click **Comment**.
+3. Leave as many comments as needed.
+4. Click **Send to agent** and copy the generated prompt.
+5. Paste that prompt into an agent running in the project folder.
+6. When the agent submits its candidate, inspect **Review changes**.
+7. Accept an addressed comment or reopen it for another pass.
+
+The agent edits the real Markdown source in the project. Submitting a review
+task records a candidate snapshot for comparison; it is not a staging area and
+does not apply or revert source changes. **View changes** remains available in
+the review-task history after a task is completed.
+
+Pending tasks can be cancelled from **Review tasks**, which releases their
+comments. Comments reported as `not_addressed` or `needs_clarification` also
+become available immediately for a new revision. Reopening an addressed comment
+does the same.
+
+If the clipboard contents are lost, find the pending entry under **Review
+tasks** and choose **Copy prompt**. This reuses the existing task instead of
+creating a duplicate.
+
+Use the **Density** setting in the top bar to switch the rendered document
+between Comfortable and Compact spacing. The browser remembers the choice.
+The **Theme** setting offers Paper and Daylight light themes plus Forest,
+Midnight, and Charcoal dark themes; the last choice is restored on the next
+launch. **Shutdown** gracefully stops the local process and leaves a clear
+confirmation in the browser tab.
+
+Comments and review tasks are stored in `.md-review/review.json`. Baseline and
+candidate snapshots used by the comparison view are content-addressed under
+`.md-review/revisions/`. Before replacing valid review data, mdreview preserves
+the previous state as `.md-review/review.json.backup`. If the primary JSON is
+corrupt, startup stops with recovery instructions instead of overwriting it.
+
+Markdown files larger than 5 MiB are rejected with a clear error to keep the
+viewer responsive. The project tree and selected document refresh automatically
+while the app is running. Relative Markdown links navigate inside the viewer,
+and relative project images are served through the authenticated local process.
 
 ## Prerequisites
 
@@ -83,48 +126,6 @@ mdreview init
 
 If `AGENTS.md` already exists, the command only previews the block. Re-run with
 `--append` to approve adding the marked block without changing existing text.
-
-## Reviewing a Markdown Workflow
-
-1. Select a Markdown file in the project tree.
-2. Select rendered text and click **Comment**.
-3. Leave as many comments as needed.
-4. Click **Send to agent** and copy the generated prompt.
-5. Paste that prompt into an agent running in the project folder.
-6. When the agent submits its candidate, inspect **Review changes**.
-7. Accept an addressed comment or reopen it for another pass.
-
-The agent edits the real Markdown source in the project. Submitting a review
-task records a candidate snapshot for comparison; it is not a staging area and
-does not apply or revert source changes. **View changes** remains available in
-the review-task history after a task is completed.
-
-Pending tasks can be cancelled from **Review tasks**, which releases their
-comments. Comments reported as `not_addressed` or `needs_clarification` also
-become available immediately for a new revision. Reopening an addressed comment
-does the same.
-
-If the clipboard contents are lost, find the pending entry under **Review
-tasks** and choose **Copy prompt**. This reuses the existing task instead of
-creating a duplicate.
-
-Use the **Density** setting in the top bar to switch the rendered document
-between Comfortable and Compact spacing. The browser remembers the choice.
-The **Theme** setting offers Paper and Daylight light themes plus Forest,
-Midnight, and Charcoal dark themes; the last choice is restored on the next
-launch. **Shutdown** gracefully stops the local process and leaves a clear
-confirmation in the browser tab.
-
-Comments and review tasks are stored in `.md-review/review.json`. Baseline and
-candidate snapshots used by the comparison view are content-addressed under
-`.md-review/revisions/`. Before replacing valid review data, mdreview preserves
-the previous state as `.md-review/review.json.backup`. If the primary JSON is
-corrupt, startup stops with recovery instructions instead of overwriting it.
-
-Markdown files larger than 5 MiB are rejected with a clear error to keep the
-viewer responsive. The project tree and selected document refresh automatically
-while the app is running. Relative Markdown links navigate inside the viewer,
-and relative project images are served through the authenticated local process.
 
 ## Agent commands
 
