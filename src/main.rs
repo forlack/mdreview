@@ -53,11 +53,19 @@ enum ReviewCommand {
         #[arg(long, default_value = "json")]
         format: String,
     },
-    /// Submit a candidate and a JSON disposition report.
+    /// Submit candidate revision results for human review.
     Submit {
         id: String,
-        #[arg(long)]
-        report: PathBuf,
+        /// JSON dispositions for mixed results or comments needing clarification.
+        #[arg(
+            long,
+            conflicts_with = "addressed_all",
+            required_unless_present = "addressed_all"
+        )]
+        report: Option<PathBuf>,
+        /// Mark every comment in the task addressed without creating a report file.
+        #[arg(long, conflicts_with = "report")]
+        addressed_all: bool,
     },
 }
 
@@ -94,15 +102,60 @@ async fn main() {
                         .map_err(|error| Box::new(error) as Box<dyn std::error::Error>)
                 }
             }
-            ReviewCommand::Submit { id, report } => {
-                server::commands::submit_task(cli.project, &id, report)
-                    .map_err(|error| Box::new(error) as Box<dyn std::error::Error>)
-            }
+            ReviewCommand::Submit {
+                id,
+                report,
+                addressed_all,
+            } => server::commands::submit_task(cli.project, &id, report, addressed_all)
+                .map_err(|error| Box::new(error) as Box<dyn std::error::Error>),
         },
     };
 
     if let Err(error) = result {
         eprintln!("mdreview: {error}");
         std::process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn review_submit_requires_exactly_one_result_mode() {
+        assert!(
+            Cli::try_parse_from([
+                "mdreview",
+                "review",
+                "submit",
+                "task_123",
+                "--addressed-all",
+            ])
+            .is_ok()
+        );
+        assert!(
+            Cli::try_parse_from([
+                "mdreview",
+                "review",
+                "submit",
+                "task_123",
+                "--report",
+                "report.json",
+            ])
+            .is_ok()
+        );
+        assert!(Cli::try_parse_from(["mdreview", "review", "submit", "task_123"]).is_err());
+        assert!(
+            Cli::try_parse_from([
+                "mdreview",
+                "review",
+                "submit",
+                "task_123",
+                "--addressed-all",
+                "--report",
+                "report.json",
+            ])
+            .is_err()
+        );
     }
 }

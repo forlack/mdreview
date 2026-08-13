@@ -11,36 +11,15 @@ developing this repository.
 When asked to revise Markdown from review comments, do not rely on prior chat
 context.
 
-Before editing:
+Run `mdreview revise <task-id>` using the task ID in the handoff prompt. This
+returns the anchored comments and exact submission command. Follow all other
+repository instructions and use the repository itself for project context.
 
-1. Follow all other repository instructions and use the repository itself for
-   project context. The review system does not replace those instructions.
-2. Run `mdreview revise <task-id>` using the task ID from the handoff
-   prompt. This returns the full task instructions and anchored comments. If the
-   command is unavailable, read `.md-review/review.json` and its schema guide.
-3. Identify the active review cycle and preserve every requested comment ID in
-   your work report.
-4. Treat the selected quote and location as evidence, not the entire request.
-   Follow the comment body together with the repository's existing context.
-
-While editing:
-
-- Edit the Markdown source, not rendered or generated output.
-- Preserve unrelated content and follow project-specific instructions elsewhere
-  in this `AGENTS.md`.
-- Do not edit comment anchors, revision hashes, or workflow state directly.
-- If a request conflicts with another instruction or lacks necessary context,
-  report `needs_clarification` instead of guessing.
-
-After editing:
-
-1. Run the repository's normal validation checks when applicable.
-2. Submit one disposition for every requested comment ID: `addressed`,
-   `not_addressed`, or `needs_clarification`, with a concise explanation.
-3. When the CLI is available, submit the candidate with
-   `mdreview review submit <cycle-id> --report <report-path>`.
-4. Never mark a comment resolved. `addressed` means awaiting reviewer approval;
-   only the reviewer resolves it.
+Edit the Markdown source, preserve unrelated content, and run applicable
+validation. If every request was handled, submit with the `--addressed-all`
+command returned by `mdreview revise`. For mixed results or requests needing
+clarification, follow its report instructions instead. Never resolve comments;
+the human reviewer accepts or reopens them.
 <!-- md-review:managed:end -->
 ```
 

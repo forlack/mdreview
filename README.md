@@ -136,15 +136,18 @@ The generated prompt points the agent to these commands:
 mdreview revise <task-id>
 mdreview comments --open --format json
 mdreview review task <task-id> --format json
-mdreview review submit <task-id> --report agent-report.json
+mdreview review submit <task-id> --addressed-all
 ```
 
 The copied prompt only asks the agent to run `mdreview revise <task-id>`.
 That command returns the complete instructions, task metadata, anchored comments,
-report format, and submission command. The lower-level `comments` and `task`
-commands remain available for inspection and automation.
+and submission command. When every request was handled, `--addressed-all` avoids
+creating a bookkeeping file. The lower-level `comments` and `task` commands
+remain available for inspection and automation.
 
-An agent report accounts for every requested comment ID:
+If some requests were not addressed or need clarification, the agent instead
+submits `--report agent-report.json`. That report accounts for every requested
+comment ID:
 
 ```json
 {
@@ -167,6 +170,7 @@ reviewer does that in the viewer.
 - [Product plan](docs/PRODUCT_PLAN.md)
 - [Architecture design](docs/ARCHITECTURE.md)
 - [Execution plan](docs/EXECUTION_PLAN.md)
+- [Revision workflow benchmark](docs/REVISION_BENCHMARK.md)
 - [Generated AGENTS.md template](docs/AGENTS_TEMPLATE.md)
 - [Testing and current limitations](docs/TESTING.md)
 

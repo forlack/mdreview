@@ -124,10 +124,11 @@ maintains workflow status separately from anchor health.
 
 ### Review-cycle service
 
-Freezes a commented baseline, exports a complete agent task, accepts one
-candidate revision plus a disposition for every requested comment ID, and keeps
-the candidate in an awaiting-review state until the reviewer accepts or reopens
-the claims. Filesystem watcher events alone never create a named review cycle.
+Freezes a commented baseline, exports compact agent instructions, accepts one
+candidate revision plus either an all-addressed acknowledgement or a disposition
+for every requested comment ID, and keeps the candidate in an awaiting-review
+state until the reviewer accepts or reopens the claims. Filesystem watcher
+events alone never create a named review cycle.
 
 ### Agent prompt generator
 

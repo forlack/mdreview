@@ -3,7 +3,9 @@ use std::{fs, path::PathBuf};
 use serde::Deserialize;
 
 use super::{
-    model::{CommentStatus, ReviewDisposition, ReviewTaskDocument},
+    model::{
+        CommentStatus, DispositionResult, ReviewDisposition, ReviewTaskDocument, ReviewTaskStatus,
+    },
     project::Project,
     store::ReviewStore,
 };
@@ -16,11 +18,9 @@ When asked to address Markdown review comments, run
 returns the complete task instructions and anchored comments. If the command is
 unavailable, read `.md-review/review.json` and `.md-review/SCHEMA.md`.
 
-Edit the referenced Markdown source and account for every requested comment ID
-as `addressed`, `not_addressed`, or `needs_clarification`, with a concise note.
-Submit one candidate with `mdreview review submit <task-id> --report
-<report-file>`. Never mark comments resolved; resolution belongs to the human
-reviewer.
+Edit the referenced Markdown source, then follow the submission command returned
+by `mdreview revise`. Never mark comments resolved; resolution belongs to the
+human reviewer.
 <!-- md-review:managed:end -->"#;
 
 #[derive(Debug, thiserror::Error)]
@@ -115,12 +115,26 @@ pub fn revise_task(project_path: PathBuf, id: &str) -> Result<(), CommandError> 
 pub fn submit_task(
     project_path: PathBuf,
     id: &str,
-    report_path: PathBuf,
+    report_path: Option<PathBuf>,
+    addressed_all: bool,
 ) -> Result<(), CommandError> {
     let project = Project::open(project_path)?;
     let store = ReviewStore::open(project.root())?;
     let task = store.agent_task(id)?.task;
-    let report: AgentReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let dispositions = if addressed_all {
+        task.comment_ids
+            .iter()
+            .map(|comment_id| ReviewDisposition {
+                comment_id: comment_id.clone(),
+                result: DispositionResult::Addressed,
+                note: "Addressed in the candidate revision.".into(),
+            })
+            .collect()
+    } else {
+        let report_path = report_path.expect("clap requires --report or --addressed-all");
+        let report: AgentReport = serde_json::from_slice(&fs::read(report_path)?)?;
+        report.dispositions
+    };
     let documents = task
         .documents
         .iter()
@@ -134,8 +148,22 @@ pub fn submit_task(
             })
         })
         .collect::<Result<Vec<_>, CommandError>>()?;
-    let submitted = store.submit_task(id, documents, report.dispositions)?;
-    println!("{}", serde_json::to_string_pretty(&submitted)?);
+    let submitted = store.submit_task(id, documents, dispositions)?;
+    let status = match submitted.status {
+        ReviewTaskStatus::Pending => "pending",
+        ReviewTaskStatus::AwaitingReview => "awaiting review",
+        ReviewTaskStatus::Complete => "complete",
+        ReviewTaskStatus::Cancelled => "cancelled",
+    };
+    let result_label = if submitted.dispositions.len() == 1 {
+        "result"
+    } else {
+        "results"
+    };
+    println!(
+        "Submitted {id}: {} comment {result_label} recorded; task is {status}.",
+        submitted.dispositions.len(),
+    );
     Ok(())
 }
 

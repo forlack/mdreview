@@ -29,9 +29,9 @@ The end-to-end acceptance path is:
 3. Confirm `.md-review/review.json` contains the correct UTF-8 byte range,
    one-based line/column range, rendered quote, source quote, context, and hash.
 4. Click **Send to agent** and copy the generated prompt.
-5. Retrieve the task with `mdreview review task`.
-6. Edit the Markdown and submit a disposition report with `mdreview review
-   submit`.
+5. Retrieve the compact task instructions with `mdreview revise <task-id>`.
+6. Edit the Markdown and submit with `mdreview review submit <task-id>
+   --addressed-all`. Also exercise `--report` for a mixed-result task.
 7. Confirm the running viewer discovers the external change, re-anchors the
    unchanged quote, displays the agent response, and exposes **Review changes**.
 8. Confirm the comparison contains both the baseline and candidate snapshots.
@@ -47,6 +47,15 @@ Additional exercised cases:
 - existing `AGENTS.md` content is unchanged unless `mdreview init --append` is
   explicitly used;
 - running `mdreview init` again updates only its marked block.
+- refreshing restores the selected Markdown file and its independent document
+  scroll position;
+- the post-submission diff shows changed lines only, preserves line numbers
+  while wrapping, and emphasizes the exact changed text within a line;
+- reopening and accepting addressed comments preserve access to task history
+  and its candidate diff.
+
+The controlled agent-flow benchmark and its current baseline are documented in
+[`REVISION_BENCHMARK.md`](REVISION_BENCHMARK.md).
 
 ## Current limitations to target next
 

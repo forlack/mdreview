@@ -118,8 +118,9 @@ of unrelated file saves:
 2. An agent receives the baseline and stable comment IDs, then uses the project
    itself for normal repository context.
 3. The agent edits the Markdown and submits one candidate revision.
-4. The agent records a disposition for every requested comment: `addressed`,
-   `not_addressed`, or `needs_clarification`, plus a short note.
+4. If every request was handled, the agent submits a single all-addressed
+   acknowledgement. Mixed results use one disposition per requested comment:
+   `addressed`, `not_addressed`, or `needs_clarification`, plus a short note.
 5. The viewer presents the baseline-to-candidate diff grouped by comment.
 6. The reviewer accepts addressed comments as resolved or reopens them against
    the candidate revision.
@@ -155,8 +156,8 @@ The binary also provides deterministic machine-readable commands:
 mdreview comments --open --format json
 mdreview comments --document docs/design.md --format json
 mdreview revise <task-id>
+mdreview review submit <cycle-id> --addressed-all
 mdreview review submit <cycle-id> --report .md-review/agent-report.json
-mdreview resolve <comment-id> --note "Verified in the candidate revision"
 ```
 
 An LLM may read the JSON directly. Status changes should go through the CLI or

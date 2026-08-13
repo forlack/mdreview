@@ -29,7 +29,12 @@ all addressed claims are accepted or reopened. A `cancelled` pending task no
 longer reserves its comments. `review.json.backup` contains the previous valid
 store state and is never used to silently overwrite a corrupt primary file.
 
-Never silently omit a requested comment ID from a review-task response.
+When every request was addressed, submit without creating a report file:
+
+`mdreview review submit <task-id> --addressed-all`
+
+For mixed results or requests needing clarification, never silently omit a
+requested comment ID. Submit a report in this format:
 
 Report format:
 
@@ -41,7 +46,8 @@ Report format:
 }
 ```
 
-Submit with `mdreview review submit <task-id> --report <report-file>`.
+Submit mixed results with
+`mdreview review submit <task-id> --report <report-file>`.
 "#;
 const SCHEMA_VERSION: u32 = 1;
 
@@ -280,24 +286,45 @@ impl ReviewStore {
                 expected: "pending".into(),
             });
         }
-        let task_json = serde_json::to_string_pretty(&agent_task)?;
-
-        Ok(format!(
-            "# Markdown review task {id}\n\n\
-             Follow all repository instructions, including `AGENTS.md`, and use the repository \
-             itself for project context. The task data below contains the affected documents, \
-             stable comment IDs, requested changes, selected source locations, and surrounding \
-             text.\n\n\
-             ```json\n{task_json}\n```\n\n\
-             Edit the referenced Markdown source and account for every requested comment ID as \
-             `addressed`, `not_addressed`, or `needs_clarification`, with a concise note. Preserve \
-             unrelated content and run relevant repository checks.\n\n\
-             Write a JSON report shaped like:\n\n\
-             ```json\n{{\"dispositions\":[{{\"commentId\":\"C-...\",\"result\":\"addressed\",\"note\":\"What changed\"}}]}}\n```\n\n\
-             Submit the completed candidate with:\n\n\
-             `mdreview review submit {id} --report <report-file>`\n\n\
-             Do not mark comments resolved. Resolution belongs to the human reviewer."
-        ))
+        let mut output = format!(
+            "# Revise Markdown feedback\n\n\
+             Task: `{id}`\n\n\
+             Follow repository instructions and use the repository for project context. Edit the \
+             referenced Markdown source, preserve unrelated content, and run only checks required \
+             by repository instructions for Markdown changes.\n"
+        );
+        let mut current_document = None;
+        for comment in &agent_task.comments {
+            if current_document.as_deref() != Some(comment.document_path.as_str()) {
+                output.push_str(&format!("\n## `{}`\n", comment.document_path));
+                current_document = Some(comment.document_path.clone());
+            }
+            let anchor = &comment.current_anchor;
+            output.push_str(&format!(
+                "\n### `{}` — line {}, column {}\n\nRequest:\n{}\n\nSelected text:\n{}\n",
+                comment.id,
+                anchor.start_line,
+                anchor.start_column,
+                markdown_quote(&comment.body),
+                markdown_quote(&anchor.rendered_exact),
+            ));
+            if anchor.health != AnchorHealth::Exact {
+                output.push_str(&format!(
+                    "\nAnchor status: `{}`\n",
+                    anchor_health_name(anchor.health)
+                ));
+            }
+        }
+        output.push_str(&format!(
+            "\nAfter editing, if every request is addressed, submit with:\n\n\
+             `mdreview review submit {id} --addressed-all`\n\n\
+             If any request is not addressed or needs clarification, write a JSON report with \
+             every comment ID using \
+             `{{\"dispositions\":[{{\"commentId\":\"...\",\"result\":\"addressed|not_addressed|needs_clarification\",\"note\":\"...\"}}]}}` \
+             and submit with `--report <report-file>` instead. Do not resolve comments; the human \
+             reviewer accepts or reopens them.\n"
+        ));
+        Ok(output)
     }
 
     pub fn agent_task(&self, id: &str) -> Result<AgentTask, StoreError> {
@@ -617,6 +644,23 @@ fn task_status_name(status: ReviewTaskStatus) -> &'static str {
     }
 }
 
+fn markdown_quote(value: &str) -> String {
+    value
+        .lines()
+        .map(|line| format!("> {line}"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn anchor_health_name(health: AnchorHealth) -> &'static str {
+    match health {
+        AnchorHealth::Exact => "exact",
+        AnchorHealth::Moved => "moved",
+        AnchorHealth::NeedsReview => "needs_review",
+        AnchorHealth::Orphaned => "orphaned",
+    }
+}
+
 fn match_positions(content: &str, exact: &str) -> Vec<usize> {
     if exact.is_empty() {
         return Vec::new();
@@ -792,11 +836,16 @@ mod tests {
             .unwrap();
 
         let instructions = store.revision_instructions(&task.id).unwrap();
-        assert!(instructions.contains("Follow all repository instructions"));
+        assert!(instructions.contains("Follow repository instructions"));
         assert!(instructions.contains("Clarify this"));
         assert!(instructions.contains("notes.md"));
         assert!(instructions.contains("mdreview review submit"));
-        assert!(instructions.contains("\"dispositions\""));
+        assert!(instructions.contains("--addressed-all"));
+        assert!(instructions.contains("line 1, column 7"));
+        assert!(instructions.contains("> target"));
+        assert!(!instructions.contains("originalAnchor"));
+        assert!(!instructions.contains("createdAt"));
+        assert!(instructions.len() < 2_000);
     }
 
     #[test]
