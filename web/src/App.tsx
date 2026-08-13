@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { api } from "./api";
 import { MarkdownView } from "./MarkdownView";
@@ -17,9 +24,14 @@ import type {
 
 type ReadingDensity = "comfortable" | "compact";
 type ThemeId = "paper" | "daylight" | "forest" | "midnight" | "charcoal";
+interface NavigationState {
+  selectedPath: string;
+  scrollByPath: Record<string, number>;
+}
 
 const READING_DENSITY_KEY = "mdreview-reading-density";
 const THEME_KEY = "mdreview-theme";
+const NAVIGATION_KEY_PREFIX = "mdreview-navigation:";
 const THEMES: Array<{ id: ThemeId; label: string }> = [
   { id: "paper", label: "Paper · Light" },
   { id: "daylight", label: "Daylight · Light" },
@@ -54,6 +66,13 @@ export function App() {
       : "compact";
   });
   const article = useRef<HTMLElement | null>(null);
+  const documentPanel = useRef<HTMLElement | null>(null);
+  const navigationProjectRoot = useRef<string | null>(null);
+  const currentDocumentPath = useRef<string | null>(null);
+  const scrollByPath = useRef<Record<string, number>>({});
+  const restoringScroll = useRef(false);
+  const pendingScrollFrame = useRef<number | null>(null);
+  currentDocumentPath.current = document?.path ?? null;
 
   useEffect(() => {
     window.document.documentElement.dataset.theme = theme;
@@ -63,9 +82,16 @@ export function App() {
   useEffect(() => {
     Promise.all([api.project(), api.tree()])
       .then(([projectInfo, nodes]) => {
+        const navigation = storedNavigation(projectInfo.root);
+        navigationProjectRoot.current = projectInfo.root;
+        scrollByPath.current = navigation?.scrollByPath ?? {};
         setProject(projectInfo);
         setTree(nodes);
-        setSelectedPath(firstFile(nodes));
+        setSelectedPath(
+          navigation && treeContains(nodes, navigation.selectedPath)
+            ? navigation.selectedPath
+            : firstFile(nodes),
+        );
       })
       .catch(showError);
   }, []);
@@ -107,6 +133,20 @@ export function App() {
       window.clearInterval(poll);
     };
   }, [selectedPath, shuttingDown]);
+
+  useLayoutEffect(() => {
+    if (!document || document.path !== selectedPath || !documentPanel.current) return;
+    const panel = documentPanel.current;
+    restoringScroll.current = true;
+    panel.scrollTop = scrollByPath.current[document.path] ?? 0;
+    const frame = window.requestAnimationFrame(() => {
+      restoringScroll.current = false;
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      restoringScroll.current = false;
+    };
+  }, [document?.path, document?.revision, selectedPath]);
 
   useEffect(() => {
     if (!message) return;
@@ -354,10 +394,43 @@ export function App() {
     article.current = element;
   }, []);
 
+  const saveCurrentScroll = useCallback(() => {
+    const root = navigationProjectRoot.current;
+    const path = currentDocumentPath.current;
+    const panel = documentPanel.current;
+    if (!root || !path || !panel) return;
+    scrollByPath.current[path] = panel.scrollTop;
+    rememberNavigation(root, {
+      selectedPath: path,
+      scrollByPath: scrollByPath.current,
+    });
+  }, []);
+
+  const handleDocumentScroll = useCallback(() => {
+    if (restoringScroll.current || pendingScrollFrame.current !== null) return;
+    pendingScrollFrame.current = window.requestAnimationFrame(() => {
+      pendingScrollFrame.current = null;
+      saveCurrentScroll();
+    });
+  }, [saveCurrentScroll]);
+
+  useEffect(() => {
+    window.addEventListener("pagehide", saveCurrentScroll);
+    return () => window.removeEventListener("pagehide", saveCurrentScroll);
+  }, [saveCurrentScroll]);
+
   const navigateToDocument = useCallback((path: string) => {
+    saveCurrentScroll();
+    const root = navigationProjectRoot.current;
+    if (root) {
+      rememberNavigation(root, {
+        selectedPath: path,
+        scrollByPath: scrollByPath.current,
+      });
+    }
     setSelectedPath(path);
     setMobilePanel(null);
-  }, []);
+  }, [saveCurrentScroll]);
 
   if (shuttingDown) {
     return (
@@ -448,17 +521,18 @@ export function App() {
           <Tree
             nodes={tree}
             selected={selectedPath}
-            onSelect={(path) => {
-              setSelectedPath(path);
-              setMobilePanel(null);
-            }}
+            onSelect={navigateToDocument}
           />
         ) : (
           <p class="empty">No Markdown files found.</p>
         )}
       </aside>
 
-      <main class={`document-panel density-${readingDensity}`}>
+      <main
+        class={`document-panel density-${readingDensity}`}
+        ref={documentPanel}
+        onScroll={handleDocumentScroll}
+      >
         {document ? (
           <MarkdownView
             source={document.content}
@@ -795,6 +869,37 @@ function storedPreference(key: string): string | null {
 function rememberPreference(key: string, value: string) {
   window.localStorage.setItem(key, value);
   window.document.cookie = `${key}=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Strict`;
+}
+
+function storedNavigation(projectRoot: string): NavigationState | null {
+  const stored = window.localStorage.getItem(`${NAVIGATION_KEY_PREFIX}${projectRoot}`);
+  if (!stored) return null;
+  try {
+    const parsed = JSON.parse(stored) as Partial<NavigationState>;
+    if (typeof parsed.selectedPath !== "string" || !isScrollMap(parsed.scrollByPath)) {
+      return null;
+    }
+    return {
+      selectedPath: parsed.selectedPath,
+      scrollByPath: parsed.scrollByPath,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function rememberNavigation(projectRoot: string, navigation: NavigationState) {
+  window.localStorage.setItem(
+    `${NAVIGATION_KEY_PREFIX}${projectRoot}`,
+    JSON.stringify(navigation),
+  );
+}
+
+function isScrollMap(value: unknown): value is Record<string, number> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value).every(
+    (offset) => typeof offset === "number" && Number.isFinite(offset) && offset >= 0,
+  );
 }
 
 function closestRenderedLocation(
