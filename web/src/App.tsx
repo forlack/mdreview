@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { api } from "./api";
 import { MarkdownView } from "./MarkdownView";
@@ -38,9 +38,7 @@ export function App() {
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [pending, setPending] = useState<PendingAnchor | null>(null);
   const [composing, setComposing] = useState(false);
-  const [commentBody, setCommentBody] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingBody, setEditingBody] = useState("");
   const [showResolved, setShowResolved] = useState(false);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [reviewDiff, setReviewDiff] = useState<ReviewDiff | null>(null);
@@ -194,14 +192,12 @@ export function App() {
     setPending(next);
   }
 
-  async function submitComment(event: Event) {
-    event.preventDefault();
-    if (!pending || !document || !commentBody.trim()) return;
+  async function submitComment(body: string) {
+    if (!pending || !document || !body.trim()) return;
     try {
-      const created = await api.createComment(document.path, commentBody, pending);
+      const created = await api.createComment(document.path, body, pending);
       setComments((current) => [...current, created]);
       setProjectComments((current) => [...current, created]);
-      setCommentBody("");
       setComposing(false);
       setPending(null);
       window.getSelection()?.removeAllRanges();
@@ -225,10 +221,10 @@ export function App() {
     }
   }
 
-  async function saveEditedComment(comment: ReviewComment) {
-    if (!editingBody.trim()) return;
+  async function saveEditedComment(comment: ReviewComment, body: string) {
+    if (!body.trim()) return;
     try {
-      const updated = await api.updateComment(comment.id, { body: editingBody });
+      const updated = await api.updateComment(comment.id, { body });
       setComments((current) =>
         current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
       );
@@ -236,7 +232,6 @@ export function App() {
         current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
       );
       setEditingId(null);
-      setEditingBody("");
       setMessage("Comment updated");
     } catch (problem) {
       showError(problem);
@@ -355,6 +350,15 @@ export function App() {
     }
   }
 
+  const setArticleRef = useCallback((element: HTMLElement | null) => {
+    article.current = element;
+  }, []);
+
+  const navigateToDocument = useCallback((path: string) => {
+    setSelectedPath(path);
+    setMobilePanel(null);
+  }, []);
+
   if (shuttingDown) {
     return (
       <main class="stopped-screen">
@@ -461,14 +465,9 @@ export function App() {
             revision={document.revision}
             comments={comments}
             documentPath={document.path}
-            articleRef={(element) => {
-              article.current = element;
-            }}
+            articleRef={setArticleRef}
             onSelection={handleSelection}
-            onNavigate={(path) => {
-              setSelectedPath(path);
-              setMobilePanel(null);
-            }}
+            onNavigate={navigateToDocument}
           />
         ) : selectedPath ? (
           <div class="loading">Loading document…</div>
@@ -525,19 +524,11 @@ export function App() {
                 <q>{comment.currentAnchor.renderedExact}</q>
               </button>
               {editingId === comment.id ? (
-                <div class="comment-editor">
-                  <textarea
-                    rows={3}
-                    value={editingBody}
-                    onInput={(event) => setEditingBody(event.currentTarget.value)}
-                  />
-                  <div>
-                    <button onClick={() => setEditingId(null)}>Cancel</button>
-                    <button disabled={!editingBody.trim()} onClick={() => saveEditedComment(comment)}>
-                      Save
-                    </button>
-                  </div>
-                </div>
+                <CommentEditor
+                  comment={comment}
+                  onCancel={() => setEditingId(null)}
+                  onSave={(body) => saveEditedComment(comment, body)}
+                />
               ) : (
                 <p>{comment.body}</p>
               )}
@@ -568,7 +559,6 @@ export function App() {
                 <button
                   onClick={() => {
                     setEditingId(comment.id);
-                    setEditingBody(comment.body);
                   }}
                 >
                   Edit
@@ -600,29 +590,11 @@ export function App() {
       )}
 
       {pending && composing && (
-        <div class="composer-backdrop" onMouseDown={() => setComposing(false)}>
-          <form
-            class="composer"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Add review comment"
-            onSubmit={submitComment}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <q>{pending.renderedExact}</q>
-            <textarea
-              autofocus
-              rows={4}
-              placeholder="What should change?"
-              value={commentBody}
-              onInput={(event) => setCommentBody(event.currentTarget.value)}
-            />
-            <div class="dialog-actions">
-              <button type="button" onClick={() => setComposing(false)}>Cancel</button>
-              <button class="primary" disabled={!commentBody.trim()} type="submit">Add comment</button>
-            </div>
-          </form>
-        </div>
+        <CommentComposer
+          quote={pending.renderedExact}
+          onCancel={() => setComposing(false)}
+          onSubmit={submitComment}
+        />
       )}
 
       {prompt && (
@@ -689,6 +661,73 @@ export function App() {
           <span>sent to clipboard.</span>
         </div>
       )}
+    </div>
+  );
+}
+
+function CommentComposer({
+  quote,
+  onCancel,
+  onSubmit,
+}: {
+  quote: string;
+  onCancel: () => void;
+  onSubmit: (body: string) => Promise<void>;
+}) {
+  const [body, setBody] = useState("");
+
+  return (
+    <div class="composer-backdrop" onMouseDown={onCancel}>
+      <form
+        class="composer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add review comment"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onSubmit(body);
+        }}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <q>{quote}</q>
+        <textarea
+          autofocus
+          rows={4}
+          placeholder="What should change?"
+          value={body}
+          onInput={(event) => setBody(event.currentTarget.value)}
+        />
+        <div class="dialog-actions">
+          <button type="button" onClick={onCancel}>Cancel</button>
+          <button class="primary" disabled={!body.trim()} type="submit">Add comment</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function CommentEditor({
+  comment,
+  onCancel,
+  onSave,
+}: {
+  comment: ReviewComment;
+  onCancel: () => void;
+  onSave: (body: string) => Promise<void>;
+}) {
+  const [body, setBody] = useState(comment.body);
+
+  return (
+    <div class="comment-editor">
+      <textarea
+        rows={3}
+        value={body}
+        onInput={(event) => setBody(event.currentTarget.value)}
+      />
+      <div>
+        <button onClick={onCancel}>Cancel</button>
+        <button disabled={!body.trim()} onClick={() => void onSave(body)}>Save</button>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { ComponentChildren, VNode } from "preact";
+import { useMemo } from "preact/hooks";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -61,27 +62,50 @@ export function MarkdownView({
   onSelection,
   onNavigate,
 }: Props) {
-  const tree = unified().use(remarkParse).use(remarkGfm).parse(source) as Root;
-  const ranges = comments
-    .filter(
-      (comment) =>
-        comment.status !== "resolved" &&
-        comment.currentAnchor.revision === revision &&
-        (comment.currentAnchor.health === "exact" || comment.currentAnchor.health === "moved"),
-    )
-    .map((comment) => ({
-      id: comment.id,
-      start: byteToCodeUnit(source, comment.currentAnchor.startByte),
-      end: byteToCodeUnit(source, comment.currentAnchor.endByte),
-    }));
-  const nodes = (tree as unknown as MdNode).children ?? [];
-  const context: RenderContext = {
-    source,
-    ranges,
-    documentPath,
-    onNavigate,
-    headingIds: headingIdentifiers(nodes),
-  };
+  const tree = useMemo(
+    () => unified().use(remarkParse).use(remarkGfm).parse(source) as Root,
+    [source],
+  );
+  const highlightKey = comments
+    .map((comment) => {
+      const anchor = comment.currentAnchor;
+      return [
+        comment.id,
+        comment.status,
+        anchor.revision,
+        anchor.health,
+        anchor.startByte,
+        anchor.endByte,
+      ].join(":");
+    })
+    .join("|");
+  const ranges = useMemo(
+    () => comments
+      .filter(
+        (comment) =>
+          comment.status !== "resolved" &&
+          comment.currentAnchor.revision === revision &&
+          (comment.currentAnchor.health === "exact" || comment.currentAnchor.health === "moved"),
+      )
+      .map((comment) => ({
+        id: comment.id,
+        start: byteToCodeUnit(source, comment.currentAnchor.startByte),
+        end: byteToCodeUnit(source, comment.currentAnchor.endByte),
+      })),
+    [highlightKey, revision, source],
+  );
+  const nodes = useMemo(() => (tree as unknown as MdNode).children ?? [], [tree]);
+  const headingIds = useMemo(() => headingIdentifiers(nodes), [nodes]);
+  const rendered = useMemo(() => {
+    const context: RenderContext = {
+      source,
+      ranges,
+      documentPath,
+      onNavigate,
+      headingIds,
+    };
+    return renderChildren(nodes, context);
+  }, [documentPath, headingIds, nodes, onNavigate, ranges, source]);
 
   return (
     <article
@@ -90,7 +114,7 @@ export function MarkdownView({
       onPointerUp={onSelection}
       onKeyUp={onSelection}
     >
-      {renderChildren(nodes, context)}
+      {rendered}
     </article>
   );
 }
