@@ -28,6 +28,9 @@ interface NavigationState {
   selectedPath: string;
   scrollByPath: Record<string, number>;
 }
+type ClipboardNotice =
+  | { kind: "prompt"; content: string }
+  | { kind: "raw"; path: string };
 
 const READING_DENSITY_KEY = "mdreview-reading-density";
 const THEME_KEY = "mdreview-theme";
@@ -55,7 +58,7 @@ export function App() {
   const [prompt, setPrompt] = useState<string | null>(null);
   const [reviewDiff, setReviewDiff] = useState<ReviewDiff | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
+  const [clipboardNotice, setClipboardNotice] = useState<ClipboardNotice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shuttingDown, setShuttingDown] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"files" | "comments" | null>(null);
@@ -155,10 +158,10 @@ export function App() {
   }, [message]);
 
   useEffect(() => {
-    if (!copiedPrompt) return;
-    const timeout = window.setTimeout(() => setCopiedPrompt(null), 3000);
+    if (!clipboardNotice) return;
+    const timeout = window.setTimeout(() => setClipboardNotice(null), 3000);
     return () => window.clearTimeout(timeout);
-  }, [copiedPrompt]);
+  }, [clipboardNotice]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -295,8 +298,8 @@ export function App() {
   async function copyAgentPrompt(task: ReviewTask) {
     const nextPrompt = await api.reviewPrompt(task.id);
     try {
-      await navigator.clipboard.writeText(nextPrompt);
-      setCopiedPrompt(nextPrompt);
+      await writeClipboard(nextPrompt);
+      setClipboardNotice({ kind: "prompt", content: nextPrompt });
     } catch {
       setPrompt(nextPrompt);
       setMessage("Clipboard access failed; copy the prompt manually");
@@ -346,11 +349,21 @@ export function App() {
   async function copyPrompt() {
     if (!prompt) return;
     try {
-      await navigator.clipboard.writeText(prompt);
-      setCopiedPrompt(prompt);
+      await writeClipboard(prompt);
+      setClipboardNotice({ kind: "prompt", content: prompt });
       setPrompt(null);
     } catch {
       setMessage("Clipboard access failed; select and copy the prompt manually");
+    }
+  }
+
+  async function copyRawMarkdown() {
+    if (!document) return;
+    try {
+      await writeClipboard(document.content);
+      setClipboardNotice({ kind: "raw", path: document.path });
+    } catch {
+      setMessage("Clipboard access failed; copy the Markdown from your editor");
     }
   }
 
@@ -493,6 +506,18 @@ export function App() {
               <option value="compact">Compact</option>
             </select>
           </label>
+          <button
+            class="secondary copy-raw-button"
+            aria-label={
+              document
+                ? `Copy raw Markdown from ${document.path}`
+                : "Copy raw Markdown"
+            }
+            disabled={!document}
+            onClick={copyRawMarkdown}
+          >
+            Copy raw
+          </button>
           <button
             class="primary"
             aria-label={`Send ${sendableComments.length} comments to agent`}
@@ -728,15 +753,57 @@ export function App() {
         </div>
       )}
 
-      {copiedPrompt && (
+      {clipboardNotice && (
         <div class="clipboard-toast" role="status">
-          <span>Prompt</span>
-          <q>{copiedPrompt}</q>
-          <span>sent to clipboard.</span>
+          {clipboardNotice.kind === "prompt" ? (
+            <>
+              <span>Prompt</span>
+              <q>{clipboardNotice.content}</q>
+              <span>sent to clipboard.</span>
+            </>
+          ) : (
+            <span>Raw Markdown from <q>{clipboardNotice.path}</q> copied to clipboard.</span>
+          )}
         </div>
       )}
     </div>
   );
+}
+
+async function writeClipboard(value: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    let timeout: number | undefined;
+    try {
+      await Promise.race([
+        navigator.clipboard.writeText(value),
+        new Promise<never>((_, reject) => {
+          timeout = window.setTimeout(() => reject(new Error("Clipboard write timed out")), 500);
+        }),
+      ]);
+      return;
+    } catch {
+      // Fall through to the selection-based copy for browsers that deny the API.
+    } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout);
+    }
+  }
+
+  const previousFocus = window.document.activeElement as HTMLElement | null;
+  const textarea = window.document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  window.document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = window.document.execCommand("copy");
+  } finally {
+    textarea.remove();
+    previousFocus?.focus();
+  }
+  if (!copied) throw new Error("Clipboard copy failed");
 }
 
 function CommentComposer({

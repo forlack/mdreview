@@ -36,6 +36,8 @@ creating a duplicate.
 
 Use the **Density** setting in the top bar to switch the rendered document
 between Comfortable and Compact spacing. The browser remembers the choice.
+Choose **Copy raw** to place the current document's original Markdown source on
+the clipboard for Markdown-aware paste tools such as Google Docs.
 The **Theme** setting offers Paper and Daylight light themes plus Forest,
 Midnight, and Charcoal dark themes; the last choice is restored on the next
 launch. **Shutdown** gracefully stops the local process and leaves a clear

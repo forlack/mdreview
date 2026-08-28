@@ -193,6 +193,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 }
 .primary:hover:not(:disabled) { background: var(--accent-strong); }
 .secondary { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: inherit; background: var(--surface); }
+.copy-raw-button:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-muted); }
 .shutdown-button { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text-muted); background: transparent; }
 .shutdown-button:hover { color: #c33f49; border-color: #c33f49; background: color-mix(in srgb, #c33f49 9%, transparent); }
 
@@ -467,7 +468,9 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   .theme-setting, .density-setting, .message { display: none; }
   .mobile-button-label, .send-label { display: none; }
   .mobile-nav-button { padding: 6px 9px; }
-  .primary, .shutdown-button { padding: 7px 9px; }
+  .primary, .copy-raw-button, .shutdown-button { padding: 7px 9px; }
+  .copy-raw-button { font-size: 0; }
+  .copy-raw-button::after { content: "Raw"; font-size: 12px; }
   .shutdown-button { font-size: 0; }
   .shutdown-button::after { content: "Stop"; font-size: 12px; }
   .markdown { padding: 30px 22px 90px; }

@@ -49,6 +49,8 @@ Additional exercised cases:
 - running `mdreview init` again updates only its marked block.
 - refreshing restores the selected Markdown file and its independent document
   scroll position;
+- **Copy raw** places the selected document's exact Markdown source on the
+  clipboard and identifies the copied file in its confirmation;
 - the post-submission diff shows changed lines only, preserves line numbers
   while wrapping, and emphasizes the exact changed text within a line;
 - reopening and accepting addressed comments preserve access to task history
