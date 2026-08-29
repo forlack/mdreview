@@ -23,7 +23,7 @@ import type {
 } from "./types";
 
 type ReadingDensity = "comfortable" | "compact";
-type ThemeId = "paper" | "daylight" | "forest" | "midnight" | "charcoal";
+type ThemeId = "paper" | "daylight" | "forest" | "midnight" | "slate" | "charcoal";
 interface NavigationState {
   selectedPath: string;
   scrollByPath: Record<string, number>;
@@ -34,12 +34,14 @@ type ClipboardNotice =
 
 const READING_DENSITY_KEY = "mdreview-reading-density";
 const THEME_KEY = "mdreview-theme";
+const FILES_COLLAPSED_KEY = "mdreview-files-collapsed";
 const NAVIGATION_KEY_PREFIX = "mdreview-navigation:";
 const THEMES: Array<{ id: ThemeId; label: string }> = [
   { id: "paper", label: "Paper · Light" },
   { id: "daylight", label: "Daylight · Light" },
   { id: "forest", label: "Forest · Dark" },
   { id: "midnight", label: "Midnight · Dark" },
+  { id: "slate", label: "Slate · Dark" },
   { id: "charcoal", label: "Charcoal · Dark" },
 ];
 
@@ -63,6 +65,9 @@ export function App() {
   const [shuttingDown, setShuttingDown] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"files" | "comments" | null>(null);
   const [theme, setTheme] = useState<ThemeId>(initialTheme);
+  const [filesCollapsed, setFilesCollapsed] = useState(
+    () => storedPreference(FILES_COLLAPSED_KEY) === "true",
+  );
   const [readingDensity, setReadingDensity] = useState<ReadingDensity>(() => {
     return storedPreference(READING_DENSITY_KEY) === "comfortable"
       ? "comfortable"
@@ -81,6 +86,10 @@ export function App() {
     window.document.documentElement.dataset.theme = theme;
     rememberPreference(THEME_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    rememberPreference(FILES_COLLAPSED_KEY, String(filesCollapsed));
+  }, [filesCollapsed]);
 
   useEffect(() => {
     Promise.all([api.project(), api.tree()])
@@ -457,7 +466,7 @@ export function App() {
   }
 
   return (
-    <div class="app-shell">
+    <div class={`app-shell ${filesCollapsed ? "files-collapsed" : ""}`}>
       <header class="topbar">
         <div class="topbar-title">
           <strong>{project?.name ?? "Markdown Review"}</strong>
@@ -540,8 +549,24 @@ export function App() {
         </div>
       </header>
 
-      <aside class={`file-panel ${mobilePanel === "files" ? "mobile-open" : ""}`} aria-label="Markdown files">
-        <div class="panel-heading">Files</div>
+      <aside
+        id="file-panel"
+        class={`file-panel ${mobilePanel === "files" ? "mobile-open" : ""}`}
+        aria-label="Markdown files"
+      >
+        <div class="panel-heading file-panel-heading">
+          <span class="file-panel-heading-label">Files</span>
+          <button
+            class="files-collapse-button"
+            aria-controls="file-panel"
+            aria-expanded={!filesCollapsed}
+            aria-label={filesCollapsed ? "Expand Files column" : "Collapse Files column"}
+            title={filesCollapsed ? "Expand Files column" : "Collapse Files column"}
+            onClick={() => setFilesCollapsed((current) => !current)}
+          >
+            <span aria-hidden="true">{filesCollapsed ? "›" : "‹"}</span>
+          </button>
+        </div>
         {tree.length ? (
           <Tree
             nodes={tree}

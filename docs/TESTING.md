@@ -51,6 +51,8 @@ Additional exercised cases:
   scroll position;
 - **Copy raw** places the selected document's exact Markdown source on the
   clipboard and identifies the copied file in its confirmation;
+- collapsing and expanding the Files column immediately resizes the document
+  canvas, while narrow viewports continue to use the Files drawer;
 - the post-submission diff shows changed lines only, preserves line numbers
   while wrapping, and emphasizes the exact changed text within a line;
 - reopening and accepting addressed comments preserve access to task history

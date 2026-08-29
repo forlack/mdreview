@@ -116,6 +116,35 @@
   --selection-action-shadow: 0 4px 14px rgb(0 0 0 / 50%);
 }
 
+:root[data-theme="slate"] {
+  color-scheme: dark;
+  color: #e4e9f0;
+  background: #0f1115;
+  --surface: #15181d;
+  --surface-muted: #1d2128;
+  --border: #343b46;
+  --text-muted: #9ba7b6;
+  --accent: #63a6ff;
+  --accent-strong: #3d82db;
+  --accent-text: #08111e;
+  --highlight: #5f501d;
+  --comment-focus: #b9912d;
+  --comment-focus-approximate: #b96c49;
+  --diff-addition: #172f27;
+  --diff-addition-gutter: #1f4033;
+  --diff-addition-emphasis: #2e6045;
+  --diff-deletion: #382126;
+  --diff-deletion-gutter: #4b2930;
+  --diff-deletion-emphasis: #6b3942;
+  --diff-hunk: #1b3049;
+  --shadow: 0 18px 60px rgb(0 0 0 / 54%);
+  --selection-action-bg: #63a6ff;
+  --selection-action-bg-hover: #7db5ff;
+  --selection-action-border: #9bc7ff;
+  --selection-action-text: #08111e;
+  --selection-action-shadow: 0 4px 14px rgb(0 0 0 / 54%);
+}
+
 :root[data-theme="charcoal"] {
   color-scheme: dark;
   color: #ededed;
@@ -157,6 +186,19 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+}
+
+@media (min-width: 901px) {
+  .app-shell { transition: grid-template-columns 160ms ease; }
+  .app-shell.files-collapsed {
+    grid-template-columns: 40px minmax(420px, 1fr) 300px;
+  }
+  .files-collapsed .file-panel-heading {
+    justify-content: center;
+    padding-inline: 5px;
+  }
+  .files-collapsed .file-panel-heading-label,
+  .files-collapsed .file-panel > :not(.file-panel-heading) { display: none; }
 }
 
 .topbar {
@@ -219,6 +261,22 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   letter-spacing: .08em;
   text-transform: uppercase;
 }
+.file-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.files-collapse-button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+}
+.files-collapse-button:hover { border-color: var(--border); color: var(--accent); background: var(--surface); }
 .count { float: right; }
 
 .review-tasks {
@@ -456,6 +514,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
     color: inherit;
     background: var(--surface);
   }
+  .files-collapse-button { display: none; }
   .markdown { padding: 40px 34px 100px; }
   .project-root { display: none; }
   .density-setting > span, .theme-setting > span { display: none; }

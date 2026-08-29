@@ -38,9 +38,11 @@ Use the **Density** setting in the top bar to switch the rendered document
 between Comfortable and Compact spacing. The browser remembers the choice.
 Choose **Copy raw** to place the current document's original Markdown source on
 the clipboard for Markdown-aware paste tools such as Google Docs.
+The Files column can be collapsed to give the rendered document more room; the
+layout responds automatically as the window or side panel changes size.
 The **Theme** setting offers Paper and Daylight light themes plus Forest,
-Midnight, and Charcoal dark themes; the last choice is restored on the next
-launch. **Shutdown** gracefully stops the local process and leaves a clear
+Midnight, Slate, and Charcoal dark themes; the last choice is restored on the
+next launch. **Shutdown** gracefully stops the local process and leaves a clear
 confirmation in the browser tab.
 
 Comments and review tasks are stored in `.md-review/review.json`. Baseline and
