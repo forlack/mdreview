@@ -39,7 +39,9 @@ Markdown on the clipboard, which is useful with Markdown-aware paste tools such
 as Google Docs. Open **More options** (`⋯`) to switch between Comfortable and
 Compact density, change the theme, or shut down the local process.
 The Files column can be collapsed to give the rendered document more room; the
-layout responds automatically as the window or side panel changes size.
+layout responds automatically as the window or side panel changes size. Its
+filter supports fuzzy, non-contiguous matching across Markdown file paths, and
+folder labels are visually distinct from document names.
 The theme choices include Paper and Daylight light themes plus Forest, Midnight,
 Slate, and Charcoal dark themes. Shutdown gracefully stops the process and
 leaves a clear confirmation in the browser tab.

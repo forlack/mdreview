@@ -8,6 +8,7 @@ import {
 } from "preact/hooks";
 
 import { api } from "./api";
+import { filterFileTree } from "./fileFilter";
 import { MarkdownView } from "./MarkdownView";
 import { captureSelection } from "./selection";
 import { UnifiedDiff } from "./UnifiedDiff";
@@ -48,6 +49,7 @@ const THEMES: Array<{ id: ThemeId; label: string }> = [
 export function App() {
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const [tree, setTree] = useState<TreeNode[]>([]);
+  const [fileQuery, setFileQuery] = useState("");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [document, setDocument] = useState<DocumentData | null>(null);
   const [comments, setComments] = useState<ReviewComment[]>([]);
@@ -83,6 +85,7 @@ export function App() {
   const restoringScroll = useRef(false);
   const pendingScrollFrame = useRef<number | null>(null);
   currentDocumentPath.current = document?.path ?? null;
+  const filteredTree = useMemo(() => filterFileTree(tree, fileQuery), [tree, fileQuery]);
 
   useEffect(() => {
     window.document.documentElement.dataset.theme = theme;
@@ -511,22 +514,6 @@ export function App() {
             <span aria-hidden="true">◫</span><span class="mobile-button-label">Comments</span>
           </button>
           <button
-            class="primary"
-            aria-label={`Send ${sendableComments.length} comments to agent`}
-            disabled={sendableComments.length === 0}
-            onClick={sendToAgent}
-          >
-            <span class="send-label">Send to agent</span> ({sendableComments.length})
-          </button>
-          {tasks
-            .filter((task) => task.status === "awaiting_review")
-            .slice(-1)
-            .map((task) => (
-              <button class="secondary" key={task.id} onClick={() => showChanges(task)}>
-                Review changes
-              </button>
-            ))}
-          <button
             class="secondary copy-raw-icon-button"
             aria-label={
               document
@@ -542,6 +529,22 @@ export function App() {
               <path d="M4.5 13.5h-1A1.5 1.5 0 0 1 2 12V3.5A1.5 1.5 0 0 1 3.5 2H12a1.5 1.5 0 0 1 1.5 1.5v1" />
             </svg>
           </button>
+          <button
+            class="primary"
+            aria-label={`Send ${sendableComments.length} comments to agent`}
+            disabled={sendableComments.length === 0}
+            onClick={sendToAgent}
+          >
+            <span class="send-label">Send to agent</span> ({sendableComments.length})
+          </button>
+          {tasks
+            .filter((task) => task.status === "awaiting_review")
+            .slice(-1)
+            .map((task) => (
+              <button class="secondary" key={task.id} onClick={() => showChanges(task)}>
+                Review changes
+              </button>
+            ))}
           <div class="more-menu-container" ref={moreMenu}>
             <button
               class="secondary more-menu-button"
@@ -619,12 +622,29 @@ export function App() {
             <span aria-hidden="true">{filesCollapsed ? "›" : "‹"}</span>
           </button>
         </div>
-        {tree.length ? (
-          <Tree
-            nodes={tree}
-            selected={selectedPath}
-            onSelect={navigateToDocument}
+        <label class="file-filter">
+          <svg aria-hidden="true" viewBox="0 0 20 20">
+            <circle cx="8.5" cy="8.5" r="5.5" />
+            <path d="m12.5 12.5 4 4" />
+          </svg>
+          <input
+            type="search"
+            aria-label="Filter Markdown files"
+            placeholder="Filter files…"
+            value={fileQuery}
+            onInput={(event) => setFileQuery(event.currentTarget.value)}
           />
+        </label>
+        {tree.length ? (
+          filteredTree.length ? (
+            <Tree
+              nodes={filteredTree}
+              selected={selectedPath}
+              onSelect={navigateToDocument}
+            />
+          ) : (
+            <p class="empty">No matching Markdown files.</p>
+          )
         ) : (
           <p class="empty">No Markdown files found.</p>
         )}
