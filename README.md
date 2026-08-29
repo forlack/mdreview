@@ -34,16 +34,18 @@ If the clipboard contents are lost, find the pending entry under **Review
 tasks** and choose **Copy prompt**. This reuses the existing task instead of
 creating a duplicate.
 
-Use the **Density** setting in the top bar to switch the rendered document
-between Comfortable and Compact spacing. The browser remembers the choice.
-Choose **Copy raw** to place the current document's original Markdown source on
-the clipboard for Markdown-aware paste tools such as Google Docs.
+Open **More options** (`⋯`) to switch between Comfortable and Compact density,
+change the theme, copy the current document's raw Markdown, or shut down the
+local process. Copying raw Markdown is useful with Markdown-aware paste tools
+such as Google Docs.
 The Files column can be collapsed to give the rendered document more room; the
 layout responds automatically as the window or side panel changes size.
-The **Theme** setting offers Paper and Daylight light themes plus Forest,
-Midnight, Slate, and Charcoal dark themes; the last choice is restored on the
-next launch. **Shutdown** gracefully stops the local process and leaves a clear
-confirmation in the browser tab.
+The theme choices include Paper and Daylight light themes plus Forest, Midnight,
+Slate, and Charcoal dark themes. Shutdown gracefully stops the process and
+leaves a clear confirmation in the browser tab.
+
+First-time users start with Slate and Compact density. Theme, density, Files
+column state, selected document, and document scroll positions are remembered.
 
 Comments and review tasks are stored in `.md-review/review.json`. Baseline and
 candidate snapshots used by the comparison view are content-addressed under

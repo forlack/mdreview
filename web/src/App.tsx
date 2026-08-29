@@ -63,6 +63,7 @@ export function App() {
   const [clipboardNotice, setClipboardNotice] = useState<ClipboardNotice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shuttingDown, setShuttingDown] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"files" | "comments" | null>(null);
   const [theme, setTheme] = useState<ThemeId>(initialTheme);
   const [filesCollapsed, setFilesCollapsed] = useState(
@@ -75,6 +76,7 @@ export function App() {
   });
   const article = useRef<HTMLElement | null>(null);
   const documentPanel = useRef<HTMLElement | null>(null);
+  const moreMenu = useRef<HTMLDivElement | null>(null);
   const navigationProjectRoot = useRef<string | null>(null);
   const currentDocumentPath = useRef<string | null>(null);
   const scrollByPath = useRef<Record<string, number>>({});
@@ -171,6 +173,22 @@ export function App() {
     const timeout = window.setTimeout(() => setClipboardNotice(null), 3000);
     return () => window.clearTimeout(timeout);
   }, [clipboardNotice]);
+
+  useEffect(() => {
+    if (!moreMenuOpen) return;
+    const closeMenu = (event: PointerEvent) => {
+      if (!moreMenu.current?.contains(event.target as Node)) setMoreMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreMenuOpen(false);
+    };
+    window.addEventListener("pointerdown", closeMenu);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("pointerdown", closeMenu);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [moreMenuOpen]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -373,6 +391,8 @@ export function App() {
       setClipboardNotice({ kind: "raw", path: document.path });
     } catch {
       setMessage("Clipboard access failed; copy the Markdown from your editor");
+    } finally {
+      setMoreMenuOpen(false);
     }
   }
 
@@ -490,43 +510,6 @@ export function App() {
           >
             <span aria-hidden="true">◫</span><span class="mobile-button-label">Comments</span>
           </button>
-          <label class="theme-setting">
-            <span>Theme</span>
-            <select
-              aria-label="Color theme"
-              value={theme}
-              onChange={(event) => setTheme(event.currentTarget.value as ThemeId)}
-            >
-              {THEMES.map((option) => (
-                <option value={option.id} key={option.id}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label class="density-setting">
-            <span>Density</span>
-            <select
-              aria-label="Markdown reading density"
-              value={readingDensity}
-              onChange={(event) =>
-                changeReadingDensity(event.currentTarget.value as ReadingDensity)
-              }
-            >
-              <option value="comfortable">Comfortable</option>
-              <option value="compact">Compact</option>
-            </select>
-          </label>
-          <button
-            class="secondary copy-raw-button"
-            aria-label={
-              document
-                ? `Copy raw Markdown from ${document.path}`
-                : "Copy raw Markdown"
-            }
-            disabled={!document}
-            onClick={copyRawMarkdown}
-          >
-            Copy raw
-          </button>
           <button
             class="primary"
             aria-label={`Send ${sendableComments.length} comments to agent`}
@@ -543,9 +526,76 @@ export function App() {
                 Review changes
               </button>
             ))}
-          <button class="shutdown-button" aria-label="Shut down mdreview" onClick={shutdown}>
-            Shutdown
-          </button>
+          <div class="more-menu-container" ref={moreMenu}>
+            <button
+              class="secondary more-menu-button"
+              aria-controls="more-options-menu"
+              aria-expanded={moreMenuOpen}
+              aria-label="More options"
+              title="More options"
+              onClick={() => setMoreMenuOpen((current) => !current)}
+            >
+              <span aria-hidden="true">⋯</span>
+            </button>
+            {moreMenuOpen && (
+              <div
+                id="more-options-menu"
+                class="topbar-menu"
+                role="group"
+                aria-label="More options"
+              >
+                <label class="menu-setting">
+                  <span>Theme</span>
+                  <select
+                    aria-label="Color theme"
+                    value={theme}
+                    onChange={(event) => setTheme(event.currentTarget.value as ThemeId)}
+                  >
+                    {THEMES.map((option) => (
+                      <option value={option.id} key={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label class="menu-setting">
+                  <span>Density</span>
+                  <select
+                    aria-label="Markdown reading density"
+                    value={readingDensity}
+                    onChange={(event) =>
+                      changeReadingDensity(event.currentTarget.value as ReadingDensity)
+                    }
+                  >
+                    <option value="comfortable">Comfortable</option>
+                    <option value="compact">Compact</option>
+                  </select>
+                </label>
+                <button
+                  class="menu-action"
+                  aria-label={
+                    document
+                      ? `Copy raw Markdown from ${document.path}`
+                      : "Copy raw Markdown"
+                  }
+                  disabled={!document}
+                  onClick={copyRawMarkdown}
+                >
+                  <span aria-hidden="true">⧉</span>
+                  <span>Copy raw Markdown</span>
+                </button>
+                <div class="menu-divider" />
+                <button
+                  class="menu-action menu-shutdown"
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    void shutdown();
+                  }}
+                >
+                  <span aria-hidden="true">⏻</span>
+                  <span>Shutdown</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -948,7 +998,7 @@ function treeContains(nodes: TreeNode[], path: string): boolean {
 function initialTheme(): ThemeId {
   const stored = storedPreference(THEME_KEY);
   if (THEMES.some((theme) => theme.id === stored)) return stored as ThemeId;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "forest" : "paper";
+  return "slate";
 }
 
 function storedPreference(key: string): string | null {

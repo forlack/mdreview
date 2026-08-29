@@ -53,6 +53,8 @@ Additional exercised cases:
   clipboard and identifies the copied file in its confirmation;
 - collapsing and expanding the Files column immediately resizes the document
   canvas, while narrow viewports continue to use the Files drawer;
+- first-run preferences default to Slate and Compact, while saved theme,
+  density, Files layout, selected document, and scroll positions are restored;
 - the post-submission diff shows changed lines only, preserves line numbers
   while wrapping, and emphasizes the exact changed text within a line;
 - reopening and accepting addressed comments preserve access to task history
