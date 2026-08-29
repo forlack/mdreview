@@ -489,7 +489,7 @@ export function App() {
     <div class={`app-shell ${filesCollapsed ? "files-collapsed" : ""}`}>
       <header class="topbar">
         <div class="topbar-title">
-          <strong>{project?.name ?? "Markdown Review"}</strong>
+          <strong>md-review</strong>
           {project && <span class="project-root">{project.root}</span>}
         </div>
         <div class="topbar-actions">
@@ -526,6 +526,22 @@ export function App() {
                 Review changes
               </button>
             ))}
+          <button
+            class="secondary copy-raw-icon-button"
+            aria-label={
+              document
+                ? `Copy raw Markdown from ${document.path}`
+                : "Copy raw Markdown"
+            }
+            title="Copy raw Markdown"
+            disabled={!document}
+            onClick={copyRawMarkdown}
+          >
+            <svg aria-hidden="true" viewBox="0 0 20 20">
+              <rect x="6.5" y="6.5" width="9" height="9" rx="1.5" />
+              <path d="M4.5 13.5h-1A1.5 1.5 0 0 1 2 12V3.5A1.5 1.5 0 0 1 3.5 2H12a1.5 1.5 0 0 1 1.5 1.5v1" />
+            </svg>
+          </button>
           <div class="more-menu-container" ref={moreMenu}>
             <button
               class="secondary more-menu-button"
@@ -569,20 +585,6 @@ export function App() {
                     <option value="compact">Compact</option>
                   </select>
                 </label>
-                <button
-                  class="menu-action"
-                  aria-label={
-                    document
-                      ? `Copy raw Markdown from ${document.path}`
-                      : "Copy raw Markdown"
-                  }
-                  disabled={!document}
-                  onClick={copyRawMarkdown}
-                >
-                  <span aria-hidden="true">⧉</span>
-                  <span>Copy raw Markdown</span>
-                </button>
-                <div class="menu-divider" />
                 <button
                   class="menu-action menu-shutdown"
                   onClick={() => {

@@ -34,10 +34,10 @@ If the clipboard contents are lost, find the pending entry under **Review
 tasks** and choose **Copy prompt**. This reuses the existing task instead of
 creating a duplicate.
 
-Open **More options** (`⋯`) to switch between Comfortable and Compact density,
-change the theme, copy the current document's raw Markdown, or shut down the
-local process. Copying raw Markdown is useful with Markdown-aware paste tools
-such as Google Docs.
+Use the copy icon in the main toolbar to place the current document's raw
+Markdown on the clipboard, which is useful with Markdown-aware paste tools such
+as Google Docs. Open **More options** (`⋯`) to switch between Comfortable and
+Compact density, change the theme, or shut down the local process.
 The Files column can be collapsed to give the rendered document more room; the
 layout responds automatically as the window or side panel changes size.
 The theme choices include Paper and Daylight light themes plus Forest, Midnight,

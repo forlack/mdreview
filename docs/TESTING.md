@@ -49,8 +49,8 @@ Additional exercised cases:
 - running `mdreview init` again updates only its marked block.
 - refreshing restores the selected Markdown file and its independent document
   scroll position;
-- **Copy raw** places the selected document's exact Markdown source on the
-  clipboard and identifies the copied file in its confirmation;
+- the main-toolbar copy icon places the selected document's exact Markdown
+  source on the clipboard and identifies the copied file in its confirmation;
 - collapsing and expanding the Files column immediately resizes the document
   canvas, while narrow viewports continue to use the Files drawer;
 - first-run preferences default to Slate and Compact, while saved theme,

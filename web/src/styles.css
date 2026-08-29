@@ -145,8 +145,8 @@
   --selection-action-border: #9bc7ff;
   --selection-action-text: #08111e;
   --selection-action-shadow: 0 4px 14px rgb(0 0 0 / 54%);
-  --code-block: #101823;
-  --code-text: #dbe7f5;
+  --code-block: #222d3a;
+  --code-text: #e1eaf5;
 }
 
 :root[data-theme="charcoal"] {
@@ -258,6 +258,27 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   font-size: 20px;
   line-height: 1;
 }
+.topbar-actions .copy-raw-icon-button {
+  display: grid;
+  width: 32px;
+  place-items: center;
+  padding: 0;
+  color: var(--text-muted);
+}
+.copy-raw-icon-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--surface-muted);
+}
+.copy-raw-icon-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
 .topbar-menu {
   position: absolute;
   top: 39px;
@@ -307,7 +328,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 }
 .menu-action:hover:not(:disabled) { background: var(--surface-muted); }
 .menu-action > span[aria-hidden] { width: 16px; color: var(--text-muted); font-size: 16px; text-align: center; }
-.menu-divider { height: 1px; margin: 6px 4px; background: var(--border); }
 .menu-shutdown { color: #d55b64; }
 .menu-shutdown > span[aria-hidden] { color: inherit; }
 
