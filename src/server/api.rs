@@ -273,6 +273,15 @@ pub async fn cancel_review_task(
     Ok(Json(state.store.cancel_task(&id)?))
 }
 
+pub async fn accept_review_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, ApiError> {
+    authorize(&state, &headers)?;
+    Ok(Json(state.store.accept_addressed_comments(&id)?))
+}
+
 pub async fn get_review_diff(
     State(state): State<AppState>,
     headers: HeaderMap,

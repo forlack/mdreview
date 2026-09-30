@@ -59,6 +59,7 @@ pub async fn run(path: PathBuf, no_open: bool) -> Result<(), ServerError> {
         .route("/api/reviews/{id}/prompt", get(api::get_review_prompt))
         .route("/api/reviews/{id}/diff", get(api::get_review_diff))
         .route("/api/reviews/{id}/cancel", post(api::cancel_review_task))
+        .route("/api/reviews/{id}/accept", post(api::accept_review_task))
         .route("/api/shutdown", post(api::shutdown_server))
         .fallback(get(assets::serve))
         .with_state(state);

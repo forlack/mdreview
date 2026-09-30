@@ -41,6 +41,8 @@ The end-to-end acceptance path is:
 Additional exercised cases:
 
 - selection inside emphasized Markdown maps to the text inside the delimiters;
+- the comment composer does not blur the document, remains inside the viewport
+  when dragged, and submits with Ctrl+Enter or Command+Enter;
 - project-wide Send to agent excludes comments already assigned to active tasks;
 - editing and confirmed deletion persist correctly;
 - API access without the per-launch token returns HTTP 401;
@@ -59,6 +61,8 @@ Additional exercised cases:
   density, Files layout, selected document, and scroll positions are restored;
 - the post-submission diff shows changed lines only, preserves line numbers
   while wrapping, and emphasizes the exact changed text within a line;
+- accepting all addressed comments from a candidate diff resolves them in one
+  atomic operation while leaving unaddressed comments open;
 - reopening and accepting addressed comments preserve access to task history
   and its candidate diff.
 

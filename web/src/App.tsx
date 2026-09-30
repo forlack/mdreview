@@ -254,6 +254,15 @@ export function App() {
     );
   }, [projectComments, tasks]);
   const taskHistory = useMemo(() => [...tasks].reverse(), [tasks]);
+  const reviewAddressedCount = useMemo(() => {
+    if (!reviewDiff) return 0;
+    const task = tasks.find((candidate) => candidate.id === reviewDiff.taskId);
+    if (!task) return 0;
+    const commentIds = new Set(task.commentIds);
+    return projectComments.filter(
+      (comment) => commentIds.has(comment.id) && comment.status === "addressed",
+    ).length;
+  }, [projectComments, reviewDiff, tasks]);
 
   function showError(problem: unknown) {
     setError(problem instanceof Error ? problem.message : String(problem));
@@ -364,6 +373,28 @@ export function App() {
   async function showChanges(task: ReviewTask) {
     try {
       setReviewDiff(await api.reviewDiff(task.id));
+    } catch (problem) {
+      showError(problem);
+    }
+  }
+
+  async function acceptAllAddressed() {
+    if (!reviewDiff || reviewAddressedCount === 0) return;
+    try {
+      const acceptedCount = reviewAddressedCount;
+      const result = await api.acceptReview(reviewDiff.taskId);
+      const updatedById = new Map(result.comments.map((comment) => [comment.id, comment]));
+      const mergeUpdates = (current: ReviewComment[]) =>
+        current.map((comment) => updatedById.get(comment.id) ?? comment);
+      setComments(mergeUpdates);
+      setProjectComments(mergeUpdates);
+      setTasks((current) =>
+        current.map((task) => (task.id === result.task.id ? result.task : task)),
+      );
+      setReviewDiff(null);
+      setMessage(
+        `Accepted ${acceptedCount} addressed comment${acceptedCount === 1 ? "" : "s"}`,
+      );
     } catch (problem) {
       showError(problem);
     }
@@ -831,7 +862,14 @@ export function App() {
                 <h2 id="candidate-changes-title">Candidate changes</h2>
                 <span>{reviewDiff.taskId}</span>
               </div>
-              <button onClick={() => setReviewDiff(null)}>Close</button>
+              <div class="diff-heading-actions">
+                {reviewAddressedCount > 0 && (
+                  <button class="primary" onClick={acceptAllAddressed}>
+                    Accept all addressed ({reviewAddressedCount})
+                  </button>
+                )}
+                <button onClick={() => setReviewDiff(null)}>Close</button>
+              </div>
             </div>
             {reviewDiff.documents.map((item) => (
               <section class="document-diff" key={item.path}>
@@ -913,20 +951,88 @@ function CommentComposer({
   onSubmit: (body: string) => Promise<void>;
 }) {
   const [body, setBody] = useState("");
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const composer = useRef<HTMLFormElement | null>(null);
+  const drag = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    baseLeft: number;
+    baseTop: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  function startDrag(event: PointerEvent) {
+    if (event.button !== 0 || !composer.current) return;
+    const bounds = composer.current.getBoundingClientRect();
+    drag.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: position.x,
+      originY: position.y,
+      baseLeft: bounds.left - position.x,
+      baseTop: bounds.top - position.y,
+      width: bounds.width,
+      height: bounds.height,
+    };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function moveDrag(event: PointerEvent) {
+    const active = drag.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    const margin = 8;
+    const nextX = active.originX + event.clientX - active.startX;
+    const nextY = active.originY + event.clientY - active.startY;
+    setPosition({
+      x: clamp(
+        nextX,
+        margin - active.baseLeft,
+        window.innerWidth - margin - active.width - active.baseLeft,
+      ),
+      y: clamp(
+        nextY,
+        margin - active.baseTop,
+        window.innerHeight - margin - active.height - active.baseTop,
+      ),
+    });
+  }
+
+  function stopDrag(event: PointerEvent) {
+    if (drag.current?.pointerId === event.pointerId) drag.current = null;
+  }
 
   return (
-    <div class="composer-backdrop" onMouseDown={onCancel}>
+    <div class="composer-backdrop comment-composer-backdrop" onMouseDown={onCancel}>
       <form
+        ref={composer}
         class="composer"
         role="dialog"
         aria-modal="true"
         aria-label="Add review comment"
+        style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
         onSubmit={(event) => {
           event.preventDefault();
           void onSubmit(body);
         }}
         onMouseDown={(event) => event.stopPropagation()}
       >
+        <div
+          class="composer-drag-handle"
+          title="Drag comment box"
+          onPointerDown={startDrag}
+          onPointerMove={moveDrag}
+          onPointerUp={stopDrag}
+          onPointerCancel={stopDrag}
+        >
+          <strong>Add comment</strong>
+          <span>Drag to move</span>
+        </div>
         <q>{quote}</q>
         <textarea
           autofocus
@@ -934,14 +1040,26 @@ function CommentComposer({
           placeholder="What should change?"
           value={body}
           onInput={(event) => setBody(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+              event.preventDefault();
+              if (body.trim()) event.currentTarget.form?.requestSubmit();
+            }
+          }}
         />
         <div class="dialog-actions">
+          <span class="submit-hint">Ctrl/⌘ Enter</span>
           <button type="button" onClick={onCancel}>Cancel</button>
           <button class="primary" disabled={!body.trim()} type="submit">Add comment</button>
         </div>
       </form>
     </div>
   );
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  if (maximum < minimum) return minimum;
+  return Math.min(Math.max(value, minimum), maximum);
 }
 
 function CommentEditor({

@@ -1,4 +1,5 @@
 import type {
+  AgentTask,
   CommentStatus,
   DocumentData,
   PendingAnchor,
@@ -93,6 +94,10 @@ export const api = {
   reviewTasks: () => request<ReviewTask[]>("/api/reviews"),
   cancelReview: (id: string) =>
     request<ReviewTask>(`/api/reviews/${encodeURIComponent(id)}/cancel`, {
+      method: "POST",
+    }),
+  acceptReview: (id: string) =>
+    request<AgentTask>(`/api/reviews/${encodeURIComponent(id)}/accept`, {
       method: "POST",
     }),
   reviewPrompt: async (id: string) => {

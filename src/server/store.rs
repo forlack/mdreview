@@ -453,6 +453,48 @@ impl ReviewStore {
         Ok(cancelled)
     }
 
+    pub fn accept_addressed_comments(&self, id: &str) -> Result<AgentTask, StoreError> {
+        let _file_lock = self.exclusive_lock()?;
+        let mut data = self.data.lock().map_err(|_| StoreError::Poisoned)?;
+        self.refresh(&mut data)?;
+        let task_index = data
+            .review_tasks
+            .iter()
+            .position(|task| task.id == id)
+            .ok_or_else(|| StoreError::TaskNotFound(id.to_owned()))?;
+        let status = data.review_tasks[task_index].status;
+        if status != ReviewTaskStatus::AwaitingReview {
+            return Err(StoreError::InvalidTaskStatus {
+                id: id.to_owned(),
+                status: task_status_name(status).into(),
+                expected: "awaiting_review".into(),
+            });
+        }
+
+        let comment_ids = data.review_tasks[task_index]
+            .comment_ids
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        let now = Utc::now().to_rfc3339();
+        for comment in &mut data.comments {
+            if comment_ids.contains(&comment.id) && comment.status == CommentStatus::Addressed {
+                comment.status = CommentStatus::Resolved;
+                comment.updated_at = now.clone();
+            }
+        }
+        data.review_tasks[task_index].status = ReviewTaskStatus::Complete;
+        let task = data.review_tasks[task_index].clone();
+        let comments = data
+            .comments
+            .iter()
+            .filter(|comment| comment_ids.contains(&comment.id))
+            .cloned()
+            .collect();
+        self.persist(&data)?;
+        Ok(AgentTask { task, comments })
+    }
+
     pub fn review_tasks(&self) -> Result<Vec<ReviewTask>, StoreError> {
         let mut data = self.data.lock().map_err(|_| StoreError::Poisoned)?;
         self.refresh(&mut data)?;
@@ -958,6 +1000,67 @@ mod tests {
             store.review_tasks().unwrap()[0].status,
             ReviewTaskStatus::Complete
         );
+    }
+
+    #[test]
+    fn accepting_a_review_resolves_all_addressed_comments_atomically() {
+        let root = tempdir().unwrap();
+        let store = ReviewStore::open(root.path()).unwrap();
+        let addressed = store
+            .create_comment("doc.md".into(), "Fix it".into(), anchor("sha256:old"))
+            .unwrap();
+        let still_open = store
+            .create_comment("doc.md".into(), "Question".into(), anchor("sha256:old"))
+            .unwrap();
+        let task = store
+            .create_task(
+                vec![addressed.id.clone(), still_open.id.clone()],
+                vec![task_document()],
+            )
+            .unwrap();
+        store
+            .submit_task(
+                &task.id,
+                vec![task_document()],
+                vec![
+                    ReviewDisposition {
+                        comment_id: addressed.id.clone(),
+                        result: DispositionResult::Addressed,
+                        note: "Updated the passage".into(),
+                    },
+                    ReviewDisposition {
+                        comment_id: still_open.id.clone(),
+                        result: DispositionResult::NeedsClarification,
+                        note: "The request is unclear".into(),
+                    },
+                ],
+            )
+            .unwrap();
+
+        let accepted = store.accept_addressed_comments(&task.id).unwrap();
+        assert_eq!(accepted.task.status, ReviewTaskStatus::Complete);
+        assert_eq!(
+            accepted
+                .comments
+                .iter()
+                .find(|comment| comment.id == addressed.id)
+                .unwrap()
+                .status,
+            CommentStatus::Resolved
+        );
+        assert_eq!(
+            accepted
+                .comments
+                .iter()
+                .find(|comment| comment.id == still_open.id)
+                .unwrap()
+                .status,
+            CommentStatus::Open
+        );
+        assert!(matches!(
+            store.accept_addressed_comments(&task.id),
+            Err(StoreError::InvalidTaskStatus { .. })
+        ));
     }
 
     #[test]

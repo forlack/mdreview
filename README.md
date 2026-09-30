@@ -18,7 +18,8 @@ needing your prior chat context.
 4. Click **Send to agent** and copy the generated prompt.
 5. Paste that prompt into an agent running in the project folder.
 6. When the agent submits its candidate, inspect **Review changes**.
-7. Accept an addressed comment or reopen it for another pass.
+7. Accept addressed comments individually or accept all of them from the diff;
+   reopen anything that needs another pass.
 
 The agent edits the real Markdown source in the project. Submitting a review
 task records a candidate snapshot for comparison; it is not a staging area and
@@ -42,6 +43,8 @@ The Files column can be collapsed to give the rendered document more room; the
 layout responds automatically as the window or side panel changes size. Its
 filter supports fuzzy, non-contiguous matching across Markdown file paths, and
 folder labels are visually distinct from document names.
+The comment composer leaves the document unobscured, can be dragged away from
+the passage being reviewed, and submits with `Ctrl+Enter` or `Command+Enter`.
 The theme choices include Paper and Daylight light themes plus Forest, Midnight,
 Slate, and Charcoal dark themes. Shutdown gracefully stops the process and
 leaves a clear confirmation in the browser tab.

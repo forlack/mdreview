@@ -59,6 +59,11 @@ export interface ReviewTask {
   dispositions: ReviewDisposition[];
 }
 
+export interface AgentTask {
+  task: ReviewTask;
+  comments: ReviewComment[];
+}
+
 export interface ReviewDisposition {
   commentId: string;
   result: "addressed" | "not_addressed" | "needs_clarification";
