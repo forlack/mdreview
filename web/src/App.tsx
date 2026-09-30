@@ -254,15 +254,23 @@ export function App() {
     );
   }, [projectComments, tasks]);
   const taskHistory = useMemo(() => [...tasks].reverse(), [tasks]);
-  const reviewAddressedCount = useMemo(() => {
-    if (!reviewDiff) return 0;
-    const task = tasks.find((candidate) => candidate.id === reviewDiff.taskId);
-    if (!task) return 0;
-    const commentIds = new Set(task.commentIds);
-    return projectComments.filter(
-      (comment) => commentIds.has(comment.id) && comment.status === "addressed",
-    ).length;
-  }, [projectComments, reviewDiff, tasks]);
+  const awaitingReviewTasks = useMemo(
+    () => tasks
+      .filter((task) => task.status === "awaiting_review")
+      .map((task) => {
+        const commentIds = new Set(task.commentIds);
+        const addressedCount = projectComments.filter(
+          (comment) => commentIds.has(comment.id) && comment.status === "addressed",
+        ).length;
+        return { task, addressedCount };
+      })
+      .filter((item) => item.addressedCount > 0)
+      .reverse(),
+    [projectComments, tasks],
+  );
+  const reviewAddressedCount = reviewDiff
+    ? awaitingReviewTasks.find((item) => item.task.id === reviewDiff.taskId)?.addressedCount ?? 0
+    : 0;
 
   function showError(problem: unknown) {
     setError(problem instanceof Error ? problem.message : String(problem));
@@ -378,11 +386,10 @@ export function App() {
     }
   }
 
-  async function acceptAllAddressed() {
-    if (!reviewDiff || reviewAddressedCount === 0) return;
+  async function acceptAllAddressed(taskId: string, addressedCount: number) {
+    if (addressedCount === 0) return;
     try {
-      const acceptedCount = reviewAddressedCount;
-      const result = await api.acceptReview(reviewDiff.taskId);
+      const result = await api.acceptReview(taskId);
       const updatedById = new Map(result.comments.map((comment) => [comment.id, comment]));
       const mergeUpdates = (current: ReviewComment[]) =>
         current.map((comment) => updatedById.get(comment.id) ?? comment);
@@ -391,9 +398,9 @@ export function App() {
       setTasks((current) =>
         current.map((task) => (task.id === result.task.id ? result.task : task)),
       );
-      setReviewDiff(null);
+      if (reviewDiff?.taskId === taskId) setReviewDiff(null);
       setMessage(
-        `Accepted ${acceptedCount} addressed comment${acceptedCount === 1 ? "" : "s"}`,
+        `Accepted ${addressedCount} addressed comment${addressedCount === 1 ? "" : "s"}`,
       );
     } catch (problem) {
       showError(problem);
@@ -707,6 +714,23 @@ export function App() {
         <div class="panel-heading">
           Comments <span class="count">{activeComments.length}</span>
         </div>
+        {awaitingReviewTasks.map(({ task, addressedCount }) => (
+          <section class="review-ready" aria-label="Agent revision ready" key={task.id}>
+            <div class="review-ready-summary">
+              <strong>Agent revision ready</strong>
+              <span>{addressedCount} addressed</span>
+            </div>
+            <div class="review-ready-actions">
+              <button onClick={() => showChanges(task)}>Review changes</button>
+              <button
+                class="primary"
+                onClick={() => acceptAllAddressed(task.id, addressedCount)}
+              >
+                Accept all ({addressedCount})
+              </button>
+            </div>
+          </section>
+        ))}
         {taskHistory.length > 0 && (
           <section class="review-tasks" aria-label="Review task history">
             <div class="review-tasks-heading">Review tasks</div>
@@ -864,7 +888,10 @@ export function App() {
               </div>
               <div class="diff-heading-actions">
                 {reviewAddressedCount > 0 && (
-                  <button class="primary" onClick={acceptAllAddressed}>
+                  <button
+                    class="primary"
+                    onClick={() => acceptAllAddressed(reviewDiff.taskId, reviewAddressedCount)}
+                  >
                     Accept all addressed ({reviewAddressedCount})
                   </button>
                 )}

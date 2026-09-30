@@ -61,8 +61,9 @@ Additional exercised cases:
   density, Files layout, selected document, and scroll positions are restored;
 - the post-submission diff shows changed lines only, preserves line numbers
   while wrapping, and emphasizes the exact changed text within a line;
-- accepting all addressed comments from a candidate diff resolves them in one
-  atomic operation while leaving unaddressed comments open;
+- accepting all addressed comments from the top of the Comments column or the
+  candidate diff resolves them in one atomic operation while leaving
+  unaddressed comments open;
 - reopening and accepting addressed comments preserve access to task history
   and its candidate diff.
 

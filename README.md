@@ -18,8 +18,8 @@ needing your prior chat context.
 4. Click **Send to agent** and copy the generated prompt.
 5. Paste that prompt into an agent running in the project folder.
 6. When the agent submits its candidate, inspect **Review changes**.
-7. Accept addressed comments individually or accept all of them from the diff;
-   reopen anything that needs another pass.
+7. Accept addressed comments individually or use **Accept all** at the top of
+   the Comments column; reopen anything that needs another pass.
 
 The agent edits the real Markdown source in the project. Submitting a review
 task records a candidate snapshot for comparison; it is not a staging area and

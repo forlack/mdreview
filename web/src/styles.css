@@ -407,6 +407,32 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .files-collapse-button:hover { border-color: var(--border); color: var(--accent); background: var(--surface); }
 .count { float: right; }
 
+.review-ready {
+  margin: 0 10px 10px;
+  padding: 10px;
+  border: 1px solid var(--accent-strong);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.review-ready-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+.review-ready-summary strong { font-size: 12px; }
+.review-ready-summary span { color: var(--text-muted); font-size: 10px; }
+.review-ready-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.review-ready-actions button {
+  min-height: 31px;
+  border-radius: 7px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 650;
+}
+.review-ready-actions button:not(.primary) { border: 1px solid var(--border); color: inherit; background: var(--surface-muted); }
+
 .review-tasks {
   margin: 0 10px 10px;
   padding: 9px;
